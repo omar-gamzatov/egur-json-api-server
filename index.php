@@ -1,11 +1,11 @@
 <?php
-    require_once("RequestHandler.php");
+    require_once('RequestHandler.php');
 
     mb_internal_encoding("UTF-8");
 
-    header("Content-Type: application/json; charset=utf-8");
+    header('Content-Type: application/json; charset=utf-8');
 
-    $data = json_decode(file_get_contents("php://input"), true);
+    $data = json_decode(file_get_contents('php://input'), true);
 
     try {
         $pdo_link = new PDO('mysql:dbname=test;host=localhost', 'root', '');
