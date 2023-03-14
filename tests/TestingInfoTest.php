@@ -1,21 +1,34 @@
 <?php
 require_once('TestingInfo.php');
 
-use phpunit\Framework\TestCase;
+use PHPUnit\Framework\TestCase;
 
 class TestingInfoTest extends TestCase {
     public function testGetTestingInfo() {
         $testing_info = new TestingInfo();
-
         try {
             $pdo_link = new PDO('mysql:dbname=test;host=localhost', 'root', '');
         } catch (PDOException) {
             die(json_encode(['error' => 'database connection failed']));
         }
+        $data = ['Serial number' => '12.222.2023.03.0001'];
+        $result = [
+            'param1' => '4235',
+            'param2' => '2536',
+            'param3' => '3667',
+            'param4' => '4562',
+            'result' => '1'
+        ];
+        $this->assertEquals($result, $testing_info->getTestingInfo($data, $pdo_link));
 
     }
     public function testGetSerialNumberArray() {
         $testing_info = new TestingInfo();
+        try {
+            $testing_info->_pdo_link = new PDO('mysql:dbname=test;host=localhost', 'root', '');
+        } catch (PDOException) {
+            die(json_encode(['error' => 'database connection failed']));
+        }
         $this->assertEquals([
             'depart' => '12',
             'stand' => '123',
@@ -24,6 +37,11 @@ class TestingInfoTest extends TestCase {
     }
     public function testGetSerialNumberId() {
         $testing_info = new TestingInfo();
+        try {
+            $testing_info->_pdo_link = new PDO('mysql:dbname=test;host=localhost', 'root', '');
+        } catch (PDOException) {
+            die(json_encode(['error' => 'database connection failed']));
+        }
         $data = [
             'depart' => '12',
             'stand' => '123',
@@ -34,7 +52,7 @@ class TestingInfoTest extends TestCase {
     public function testGetTestingInfoBySerialId() {
         $testing_info = new TestingInfo();
         try {
-            $pdo_link = new PDO('mysql:dbname=test;host=localhost', 'root', '');
+            $testing_info->_pdo_link = new PDO('mysql:dbname=test;host=localhost', 'root', '');
         } catch (PDOException) {
             die(json_encode(['error' => 'database connection failed']));
         }

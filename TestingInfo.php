@@ -1,55 +1,66 @@
 <?php
 class TestingInfo {
-    private $pdo_link;
-    private $recieved_data;
+    private array $_recieved_data;
+    public PDO $_pdo_link;
 
-    //////////////////////////////////////////// send_testing_info //////////////////////////////////////////////
-    public function sendTestingInfo($recieved_data, $pdo_link): void {
+    /**
+     * Добавляет новую запись в таблице testing_info с полученными от клиента данными
+     * @param array $recieved_data полученные от клиента данные
+     * @param PDO $pdo_link экзепляр PDO, представляющий соединение с базой данных
+     * 
+     * Возвращает кленту json encoded string с результатом выполнения
+     */
+    public function sendTestingInfo(array $recieved_data, PDO $pdo_link): void {
+        $this->_pdo_link = $pdo_link;
+        $this->_pdo_link->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $this->_recieved_data = $recieved_data;
 
-        $this->pdo_link = $pdo_link;
-        $this->pdo_link->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $this->recieved_data = $recieved_data;
-
-        $serial_number = $this->recieved_data['Serial number'];
+        $serial_number = $this->_recieved_data['Serial number'];
         $serial_array = $this->getSerialNumberArray($serial_number);
         $serial_number_id = $this->getSerialNumberId($serial_array);
         
-        unset($this->recieved_data['Serial number']);
-
-        $pdo_statement = $this->pdo_link->prepare("INSERT INTO `testing_info` (`serial_number_id`, `param1`, `param2`, `param3`, `param4`, `result`)
-                                     VALUES ('$serial_number_id', :param1, :param2, :param3, :param4, :result)");
+        unset($this->_recieved_data['Serial number']);
+        $this->_pdo_link->beginTransaction();
+        $pdo_statement = $this->_pdo_link->prepare(
+            "INSERT INTO `testing_info` (`serial_number_id`, `param1`, `param2`, `param3`, `param4`, `result`)
+             VALUES ('$serial_number_id', :param1, :param2, :param3, :param4, :result)");
         try {
-            $result = $pdo_statement->execute($this->recieved_data);
-            if($result) echo(json_encode(['message' => 'testing info sended']));
+            if($pdo_statement->execute($this->_recieved_data)) {
+                $this->_pdo_link->commit();
+                die(json_encode(['message' => 'testing info sended']));             
+            }
         } catch (PDOException) {
-            echo(json_encode(['error: ' => 'testing info not sended']));
+            $this->_pdo_link->rollBack();
+            die(json_encode(['error: ' => 'testing info not sended']));
         }
     }
 
-    //////////////////////////////////////////// get_testing_info //////////////////////////////////////////////
     /**
-     * 
+     * Возвращает кленту запись из БД с тестовой информацией по полученному серийному номеру 
+     * @param array $recieved_data полученные от клиента данные
+     * @param PDO $pdo_link экзепляр PDO, представляющий соединение с базой данных
+     * @return array массив с тестовой информацией изделия с указаным серийным номером
      */
-    public function getTestingInfo($recieved_data, $pdo_link): void {
+    public function getTestingInfo(array $recieved_data, PDO $pdo_link): array {
+        $this->_pdo_link = $pdo_link;
+        $this->_pdo_link->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $this->_recieved_data = $recieved_data;
 
-        $this->pdo_link = $pdo_link;
-        $this->pdo_link->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $this->recieved_data = $recieved_data;
-
-        $serial_number = $this->recieved_data['Serial number'];
+        $serial_number = $this->_recieved_data['Serial number'];
         $serial_array = $this->getSerialNumberArray($serial_number);
         $serial_number_id = $this->getSerialNumberId($serial_array);
-        if ($serial_number_id != null)
-            echo(json_encode($this->getTestingInfoBySerialId($serial_number_id, $serial_array)));
-        else 
-            echo(json_encode(['error: ' => 'cannot recieve serial number id']));
+        
+        $result = $this->getTestingInfoBySerialId($serial_number_id, $serial_array);
+        echo(json_encode($result));
+        return $result;
     }
 
     /**
+     * Разбивает строку с серийным номер на элементы массива
      * @param string $serial_number серийный номер изделия
-     * @return array серийный номер в виде массива 
+     * @return array серийный номер в виде массива ['depart' => xx, 'stand' => xxx, 'ordinal' => xxxx.xx.xxxx]
      */
-    public function getSerialNumberArray($serial_number): array {
+    public function getSerialNumberArray(string $serial_number): array {
         $array = explode('.', $serial_number);
         return [
             'depart' => "$array[0]", 
@@ -58,48 +69,59 @@ class TestingInfo {
     }
 
     /**
+     * Получает из БД id записи с полученным от клиента серийным номером
      * @param array $serial_array серийный номер в виде массива
      * @return string идентификатор записи с тест. инф.
      */
-    public function getSerialNumberId($serial_array): mixed {
-        $pdo_statement = $this->pdo_link->prepare("SELECT `serial_number_id` 
-                                FROM `serial_number` WHERE 
-                                `depart_num` = :depart
-                                AND `stand_num` = :stand
-                                AND `serial_num` = :ordinal");
+    public function getSerialNumberId(array $serial_array): string|array {
+        $this->_pdo_link->beginTransaction();
+        $pdo_statement = $this->_pdo_link->prepare(
+            "SELECT `serial_number_id` 
+            FROM `serial_number` WHERE 
+            `depart_num` = :depart
+            AND `stand_num` = :stand
+            AND `serial_num` = :ordinal");
         try {
             $pdo_statement->execute($serial_array);
+            $this->_pdo_link->commit();
             $pdo_statement->setFetchMode(PDO::FETCH_ASSOC);
             $result = $pdo_statement->fetch();
-            if(!$result) return null;
+            if(!$result) die(json_encode(['error: ' => 'cannot recieve serial number id']));
             return $result['serial_number_id'];
         } catch (PDOException) {
-            return null;
+            $this->_pdo_link->rollBack();
+            die(json_encode(['error: ' => 'cannot recieve serial number id']));
         }
     }
 
     /**
-     * 
+     * Получает из БД массив с атрибутами тестовой информации для заданного серийного номера
+     * @param string $serial_number_id id записи с полученным от клинета серийным номером
+     * @param array $serial_number массив с элементами серийного номера
+     * @return string|array результат выполнения запроса к БД 
      */
-    public function getTestingInfoBySerialId($serial_number_id, $serial_number): mixed {
+    public function getTestingInfoBySerialId(string $serial_number_id, array $serial_number): string|array {
         $data = [
             'depart' => $serial_number['depart'],
             'stand' => $serial_number['stand'],
             'ordinal' => $serial_number['ordinal'],
             'serial_number_id' => $serial_number_id
         ];
-        
-        $pdo_statement = $this->pdo_link->prepare("SELECT `param1`, `param2`, `param3`, `param4`, `result`
-                                    FROM `testing_info` INNER JOIN `serial_number` ON
-                                    serial_number.depart_num = :depart
-                                    AND serial_number.stand_num = :stand
-                                    AND serial_number.serial_num = :ordinal
-                                    AND testing_info.serial_number_id = :serial_number_id");
+        $this->_pdo_link->beginTransaction();
+        $pdo_statement = $this->_pdo_link->prepare(
+            "SELECT `param1`, `param2`, `param3`, `param4`, `result`
+            FROM `testing_info` INNER JOIN `serial_number` ON
+            serial_number.depart_num = :depart
+            AND serial_number.stand_num = :stand
+            AND serial_number.serial_num = :ordinal
+            AND testing_info.serial_number_id = :serial_number_id");
         try {
             $pdo_statement->execute($data);    
-            $pdo_statement->setFetchMode(PDO::FETCH_ASSOC);
+            $this->_pdo_link->commit();
+            $pdo_statement->setFetchMode(PDO::FETCH_ASSOC);         
             return $pdo_statement->fetch();
         } catch (PDOException) {
+            $this->_pdo_link->rollBack();
             return json_encode(['error: ' => 'cannot recieve testing info']);
         }
     }

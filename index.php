@@ -14,5 +14,6 @@
     }
     
     $handler = new RequestHandler($_GET['request'], $data, $pdo_link);
+    
    
 ?>

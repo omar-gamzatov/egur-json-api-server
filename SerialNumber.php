@@ -1,37 +1,56 @@
 <?php
 class SerialNumber {
-    private $pdo_link;
-    private $recieved_data;
+    private array $_recieved_data;
+    public PDO $_pdo_link;
 
+    /**
+     * Получает из БД послуднюю запись серийного номера, формирует новый серийный номер
+     * Если новый серийный номер сформирован, добавляет новую запись в БД
+     * @param array $recieved_data полученные от клиента данные
+     * @param PDO $pdo_link экзепляр PDO, представляющий соединение с базой данных
+     * @return string новый серийный номер вида xx.xxx.xxxx.xx.xxxx
+     */
+    public function getNewSerialNumber(array $recieved_data, PDO $pdo_link): string {
+        $this->_pdo_link = $pdo_link;
+        $this->_pdo_link->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $this->_recieved_data = $recieved_data;  
 
-    public function __construct($recieved_data, $pdo_link) {
-        $this->pdo_link = $pdo_link;
-        $this->pdo_link->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $this->recieved_data = $recieved_data;        
-    }
-
-    public function getNewSerialNumber(): string {
         $last_ordinal_number = $this->getLastSerialNumber();
-        $depart = $this->recieved_data['depart_num'];
-        $stand = $this->recieved_data['stand_num'];
+        $depart = $this->_recieved_data['depart_num'];
+        $stand = $this->_recieved_data['stand_num'];
         $ordinal = $this->createNewOrdinalNumber($last_ordinal_number['serial_num']);
+
         $this->sendNewSerialNumberToDatabase($ordinal);
         echo(json_encode(['Serial number' => "$depart.$stand.$ordinal"]));
         return "$depart.$stand.$ordinal";
     }
 
-    public function getLastSerialNumber(): mixed {
-        $pdo_statement = $this->pdo_link->query('SELECT * FROM `serial_number` ORDER BY `serial_num` DESC LIMIT 1');
+    /**
+     * Возвращает массив с серийным номером вида ['serial_number_id' => x, 'operator' => x, 'depart_num' => xx,
+     * 'stand_num' => xxx, 'serial_num' => xxxx.xx.xxxx, 'date' => xxxx-xx-xx xx:xx:xx] в случае успешного выполнения запроса
+     * иначе позвращает на клиент json encoded string вида {'error' : 'одна ошибка и ты ошибся'}
+     * @return string|array 
+     */
+    public function getLastSerialNumber(): string|array {
+        $this->_pdo_link->beginTransaction();
+        $pdo_statement = $this->_pdo_link->prepare('SELECT * FROM `serial_number` ORDER BY `serial_num` DESC LIMIT 1');
         $pdo_statement->setFetchMode(PDO::FETCH_ASSOC);
         try {
             $pdo_statement->execute();
+            $this->_pdo_link->commit();
         } catch (PDOException) {
+            $this->_pdo_link->rollBack();
             die(json_encode(['error' => 'last serial number number was not received']));
         }
         return $pdo_statement->fetch();
     }
 
-    public function createNewOrdinalNumber($last_ordinal_number): string {
+    /**
+     * На основе порядкового номера изделия и текущей даты формирует новый порядковый номер для следующего иделия
+     * @param string $last_ordinal_number последний порядковый номер полученый из БД
+     * @return string новый орядковый номер вида xxxx.xx.xxxx
+     */
+    public function createNewOrdinalNumber(string $last_ordinal_number): string {
         if ($last_ordinal_number === null)
             $ordinal_number = date("Y.m") . "0001";
         else {
@@ -45,7 +64,13 @@ class SerialNumber {
         return $ordinal_number;
     }
 
-    public function isNewMonthOrYear($last_date): bool {
+    /**
+     * Осуществляет проверку даты последней записи серийного номера из БД, если в текущем месяце записей не было порядковый номер
+     * обнуляется (xxxx.xx.xxxx => xxxx.xx.0000) 
+     * @param array $last_date год и месяц последней записи
+     * @return bool true если в текущем месяце записей не было, false если были
+     */
+    public function isNewMonthOrYear(array $last_date): bool {
         // Декущая дата
         $current_year = date("Y");
         $current_month = date("m");
@@ -61,21 +86,27 @@ class SerialNumber {
         return ($condition1 || $condition2 || $condition3 || $condition4);
     }
     
-    private function sendNewSerialNumberToDatabase($ordinal_number): void {
-        
+    /**
+     * Записывает новый серийный номер вида xx.xxx.xxxx.xx.xxxx в БД
+     * В случае ошибки отправит на клиент json encoded error
+     * @param string $ordinal_number новый порядковый номер изделия
+     */
+    private function sendNewSerialNumberToDatabase(string $ordinal_number): void {
         $data = [
-            'operator' => $this->recieved_data['operator'],
-            'depart_num' => $this->recieved_data['depart_num'],
-            'stand_num' => $this->recieved_data['stand_num'],
+            'operator' => $this->_recieved_data['operator'],
+            'depart_num' => $this->_recieved_data['depart_num'],
+            'stand_num' => $this->_recieved_data['stand_num'],
             'ordinal' => $ordinal_number
         ];
-
-        $pdo_statement = $this->pdo_link->prepare("INSERT INTO `serial_number` (`serial_number_id`, `operator`, `depart_num`, `stand_num`, `serial_num`, `date`)
+        $this->_pdo_link->beginTransaction();
+        $pdo_statement = $this->_pdo_link->prepare("INSERT INTO `serial_number` (`serial_number_id`, `operator`, `depart_num`, `stand_num`, `serial_num`, `date`)
         VALUES (NULL, :operator, :depart_num, :stand_num, :ordinal, CURRENT_TIMESTAMP)");
 
         try {
             $pdo_statement->execute($data);
+            $this->_pdo_link->commit();
         } catch (PDOException) {
+            $this->_pdo_link->rollBack();
             die(json_encode(['error' => 'new serial number not recorded to database']));
         }
     }
