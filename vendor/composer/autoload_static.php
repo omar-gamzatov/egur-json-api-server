@@ -16,13 +16,15 @@ class ComposerStaticInite94a88dca6556c78924c7271478b75b3
         array (
             'PhpParser\\' => 10,
         ),
+        'E' => 
+        array (
+            'Egur\\Tests\\' => 11,
+            'Egur\\Functions\\' => 15,
+            'Egur\\' => 5,
+        ),
         'D' => 
         array (
             'DeepCopy\\' => 9,
-        ),
-        'A' => 
-        array (
-            'Andrey\\Egur\\' => 12,
         ),
     );
 
@@ -31,13 +33,21 @@ class ComposerStaticInite94a88dca6556c78924c7271478b75b3
         array (
             0 => __DIR__ . '/..' . '/nikic/php-parser/lib/PhpParser',
         ),
+        'Egur\\Tests\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/Tests',
+        ),
+        'Egur\\Functions\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/Functions',
+        ),
+        'Egur\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/',
+        ),
         'DeepCopy\\' => 
         array (
             0 => __DIR__ . '/..' . '/myclabs/deep-copy/src/DeepCopy',
-        ),
-        'Andrey\\Egur\\' => 
-        array (
-            0 => __DIR__ . '/../..' . '/src',
         ),
     );
 

@@ -1,0 +1,10 @@
+{
+    "configurations": [
+        {
+            "name": "Listen for Xdebug",
+            "detail": "Waits for requests to debug.",
+            "type": "php",
+            "request": "launch"
+        }
+    ]
+}
