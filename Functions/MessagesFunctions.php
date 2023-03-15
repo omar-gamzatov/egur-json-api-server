@@ -5,6 +5,7 @@ namespace Egur\Functions;
 
 /**
  * Выполняет функцию die() с выводом json encoded error
+ * 
  * @param string $error
  */
 function die_with_error(string $error): void
@@ -17,6 +18,7 @@ function die_with_error(string $error): void
 
 /**
  * Выполняет функцию echo() с выводом json encoded error
+ * 
  * @param string $error
  */
 function echo_error(string $error): void
@@ -29,6 +31,7 @@ function echo_error(string $error): void
 
 /**
  * Возвращает строку с json encoded error
+ * 
  * @param string $error
  * @return string
  */
@@ -42,6 +45,7 @@ function get_error(string $error): string
 
 /**
  * Выполняет функцию die() с выводом json encoded message
+ * 
  * @param string $message
  */
 function die_with_message(string $message): void
@@ -54,6 +58,7 @@ function die_with_message(string $message): void
 
 /**
  * Выполняет функцию echo() с выводом json encoded message
+ * 
  * @param string $message
  */
 function echo_message(string $message): void
@@ -66,6 +71,7 @@ function echo_message(string $message): void
 
 /**
  * Возвращает строку с json encoded message
+ * 
  * @param string $message
  * @return string
  */
