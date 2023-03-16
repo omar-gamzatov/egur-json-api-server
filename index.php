@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace Egur;
 
-require("vendor/autoload.php");
+require_once("vendor/autoload.php");
 
 use PDO;
-use Egur\RequestHandler;
 
 mb_internal_encoding("UTF-8");
 

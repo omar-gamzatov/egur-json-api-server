@@ -6,9 +6,11 @@ namespace Egur\Tests;
 
 require("vendor/autoload.php");
 
+use PDO;
+
 use Egur\Functions\SerialNumber;
 use PHPUnit\Framework\TestCase;
-use PDO;
+
 
 final class SerialNumberTest extends TestCase 
 {
@@ -28,7 +30,7 @@ final class SerialNumberTest extends TestCase
 
         $serial_number = new SerialNumber();
 
-        $this->assertSame('12.123.2023.03.0040', $serial_number->getNewSerialNumber($data, $pdo_link));
+        $this->assertSame('12.123.2023.03.0043', $serial_number->getNewSerialNumber($data, $pdo_link));
     }
 
     public function testGetLastSerialNumber() 
