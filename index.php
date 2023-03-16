@@ -7,17 +7,22 @@ namespace Egur;
 require_once("vendor/autoload.php");
 
 use PDO;
+use Egur\Functions\Messages;
 
 mb_internal_encoding("UTF-8");
 
 header('Content-Type: application/json; charset=utf-8');
+header('API-Version: 1.0');
 
 $data = json_decode(file_get_contents('php://input'), true);
 
 try {
     $pdo_link = new PDO('mysql:dbname=test;host=localhost', 'root', '');
 } catch (PDOException) {
-    die(json_encode(['error' => 'database connection failed']));
+    Messages::dieWithError('database connection failed');
 }
-
-new RequestHandler($_GET['request'], $data, $pdo_link);
+if ($_GET['request']) {
+    new RequestHandler($_GET['request'], $data, $pdo_link);
+} else {
+    Messages::dieWithError('unknown request');
+}
